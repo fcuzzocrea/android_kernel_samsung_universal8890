@@ -291,6 +291,7 @@ shrink_slab_node(struct shrink_control *shrinkctl, struct shrinker *shrinker,
 	int nid = shrinkctl->nid;
 	long batch_size = shrinker->batch ? shrinker->batch
 					  : SHRINK_BATCH;
+	long scanned = 0, next_deferred;
 
 	freeable = shrinker->count_objects(shrinker, shrinkctl);
 	if (freeable == 0)
@@ -313,7 +314,9 @@ shrink_slab_node(struct shrink_control *shrinkctl, struct shrinker *shrinker,
 		"shrink_slab: %pF negative objects to delete nr=%ld\n",
 		       shrinker->scan_objects, total_scan);
 		total_scan = freeable;
-	}
+		next_deferred = nr;
+	} else
+		next_deferred = total_scan;
 
 	/*
 	 * We need to avoid excessive windup on filesystem shrinkers
@@ -371,16 +374,22 @@ shrink_slab_node(struct shrink_control *shrinkctl, struct shrinker *shrinker,
 		total_scan -= ret > nr_to_scan ? ret : nr_to_scan;
 		count_vm_events(SLABS_SCANNED, nr_to_scan);
 
+		scanned += nr_to_scan;
+
 		cond_resched();
 	}
 
+	if (next_deferred >= scanned)
+		next_deferred -= scanned;
+	else
+		next_deferred = 0;
 	/*
 	 * move the unused scan count back into the shrinker in a
 	 * manner that handles concurrent updates. If we exhausted the
 	 * scan, there is no need to do an update.
 	 */
-	if (total_scan > 0)
-		new_nr = atomic_long_add_return(total_scan,
+	if (next_deferred > 0)
+		new_nr = atomic_long_add_return(next_deferred,
 						&shrinker->nr_deferred[nid]);
 	else
 		new_nr = atomic_long_read(&shrinker->nr_deferred[nid]);
@@ -1463,8 +1472,10 @@ int isolate_lru_page(struct page *page)
 
 static int __too_many_isolated(struct zone *zone, int file,
 	struct scan_control *sc, int safe)
+
 {
 	unsigned long inactive, isolated;
+
 
 	if (file) {
 		if (safe) {
@@ -1560,6 +1571,7 @@ putback_inactive_pages(struct lruvec *lruvec, struct list_head *page_list)
 			if (file)
 				SetPageWasActive(page);
 		if (is_active_lru(lru)) {
+
 			int numpages = hpage_nr_pages(page);
 			reclaim_stat->recent_rotated[file] += numpages;
 		}
@@ -3025,6 +3037,7 @@ unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 				gfp_mask);
 
 	nr_reclaimed = do_try_to_free_pages(zonelist, &sc);
+
 	trace_mm_vmscan_direct_reclaim_end(nr_reclaimed);
 
 	return nr_reclaimed;
