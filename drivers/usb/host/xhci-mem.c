@@ -2417,6 +2417,7 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 #else
 	/* init command timeout work */
 	INIT_DELAYED_WORK(&xhci->cmd_timer, xhci_handle_command_timeout);
+	init_completion(&xhci->cmd_ring_stop_completion);
 #endif
 
 	page_size = readl(&xhci->op_regs->page_size);
