@@ -1846,7 +1846,7 @@ void xhci_mem_cleanup(struct xhci_hcd *xhci)
 #if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	cancel_delayed_work_sync(&xhci->cmd_timer);
 #else
-	del_timer_sync(&xhci->cmd_timer);
+	cancel_delayed_work_sync(&xhci->cmd_timer);
 #endif
 
 	/* Free the Event Ring Segment Table and the actual Event Ring */
@@ -2414,6 +2414,9 @@ int xhci_mem_init(struct xhci_hcd *xhci, gfp_t flags)
 #if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 	INIT_DELAYED_WORK(&xhci->cmd_timer, xhci_handle_command_timeout);
 	init_completion(&xhci->cmd_ring_stop_completion);
+#else
+	/* init command timeout work */
+	INIT_DELAYED_WORK(&xhci->cmd_timer, xhci_handle_command_timeout);
 #endif
 
 	page_size = readl(&xhci->op_regs->page_size);

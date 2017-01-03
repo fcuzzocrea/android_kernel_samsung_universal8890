@@ -1502,7 +1502,7 @@ struct xhci_hcd {
 	struct delayed_work	cmd_timer;
 	struct completion	cmd_ring_stop_completion;
 #else
-	struct timer_list	cmd_timer;
+	struct delayed_work	cmd_timer;
 #endif
 	struct xhci_command	*current_cmd;
 	struct xhci_ring	*event_ring;
@@ -1891,7 +1891,7 @@ void xhci_stop_endpoint_command_watchdog(unsigned long arg);
 #if defined(CONFIG_USB_HOST_SAMSUNG_FEATURE)
 void xhci_handle_command_timeout(struct work_struct *work);
 #else
-void xhci_handle_command_timeout(unsigned long data);
+void xhci_handle_command_timeout(struct work_struct *work);
 #endif
 void xhci_ring_ep_doorbell(struct xhci_hcd *xhci, unsigned int slot_id,
 		unsigned int ep_index, unsigned int stream_id);
