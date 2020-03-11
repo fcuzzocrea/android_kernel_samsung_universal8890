@@ -1157,7 +1157,7 @@ void set_gyro_cal_lib_enable(struct ssp_data *data, bool bEnable)
 	
 }
 
-#if defined(CONFIG_SSP_MOTOR)
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
 int send_motor_state(struct ssp_data *data)
 {
 	int iRet = 0;

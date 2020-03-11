@@ -215,7 +215,7 @@ enum {
 #define MSG2SSP_AP_GLASS_TYPE             0xEC
 #endif
 
-#if defined(CONFIG_SSP_MOTOR)
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
 #define MSG2SSP_AP_MCU_SET_MOTOR_STATUS		0xC3
 #endif
 
@@ -704,7 +704,7 @@ struct ssp_data {
 	struct workqueue_struct *bbd_mcu_ready_wq;
 	struct work_struct work_bbd_mcu_ready;
 
-#if defined(CONFIG_SSP_MOTOR)
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
 	struct workqueue_struct *ssp_motor_wq;
 	struct work_struct work_ssp_motor;
 #endif
@@ -935,7 +935,7 @@ struct ssp_data {
 	int change_axis;
 #endif
 
-#if defined(CONFIG_SSP_MOTOR)
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
 	int motor_state;
 #endif
 	char sensor_state[SENSOR_MAX + 1];
@@ -1105,7 +1105,7 @@ void initialize_hiddenhole_factorytest(struct ssp_data*);
 void remove_hiddenhole_factorytest(struct ssp_data *);
 #endif
 int get_msdelay(int64_t);
-#if defined(CONFIG_SSP_MOTOR)
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
 int send_motor_state(struct ssp_data *);
 #endif
 u64 get_sensor_scanning_info(struct ssp_data *);
@@ -1194,7 +1194,7 @@ int bbd_do_transfer(struct ssp_data *data, struct ssp_msg *msg,
 #ifdef SSP_BBD_USE_SEND_WORK
 void bbd_send_packet_work_func(struct work_struct *work);
 #endif	/* SSP_BBD_USE_SEND_WORK  */
-#ifdef CONFIG_SSP_MOTOR
+#ifdef CONFIG_SSP_MOTOR_CALLBACK
 void ssp_motor_work_func(struct work_struct *work);
 int get_current_motor_state(void);
 #endif

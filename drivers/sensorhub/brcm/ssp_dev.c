@@ -32,9 +32,8 @@ static void ssp_late_resume(struct early_suspend *handler);
 #include <linux/muic/muic_notifier.h>
 #endif
 
-#if defined(CONFIG_SSP_MOTOR)
-#include "ssp_motor.h"
-#include "../../motor/max77854_haptic.h"
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
+#include <linux/ssp_motorcallback.h>
 #endif
 
 unsigned int bootmode;
@@ -600,7 +599,7 @@ static int ssp_hall_ic_notify(struct notifier_block *nb,
 }
 #endif
 
-#if defined(CONFIG_SSP_MOTOR)
+#if defined(CONFIG_SSP_MOTOR_CALLBACK)
 static struct ssp_data *ssp_data_info = NULL;
 void set_ssp_data_info(struct ssp_data *data)
 {
@@ -861,7 +860,7 @@ static int ssp_probe(struct spi_device *spi)
 	iRet = 0;
 	mutex_init(&shutdown_lock);
 
-#ifdef CONFIG_SSP_MOTOR
+#ifdef CONFIG_SSP_MOTOR_CALLBACK
 	pr_info("[SSP]: %s motor callback set!", __func__);
 	set_ssp_data_info(data);
 	//register motor
@@ -884,7 +883,7 @@ static int ssp_probe(struct spi_device *spi)
         INIT_DELAYED_WORK(&data->work_ssp_reset, ssp_reset_work_func);
 	goto exit;
 
-#ifdef CONFIG_SSP_MOTOR
+#ifdef CONFIG_SSP_MOTOR_CALLBACK
 err_create_motor_workqueue:
 	destroy_workqueue(data->ssp_motor_wq);
 #endif
@@ -968,7 +967,7 @@ static void ssp_shutdown(struct spi_device *spi)
 	data->bbd_on_packet_wq = NULL;
 	data->bbd_mcu_ready_wq = NULL;
 
-#ifdef CONFIG_SSP_MOTOR
+#ifdef CONFIG_SSP_MOTOR_CALLBACK
 	cancel_work_sync(&data->work_ssp_motor);
 	destroy_workqueue(data->ssp_motor_wq);
 

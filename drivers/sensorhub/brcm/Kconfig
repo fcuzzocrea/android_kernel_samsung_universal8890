@@ -641,7 +641,7 @@ config SENSORS_SSP_HAECHI_888
  	  To compile this driver as a module, choose M here: the
  	  module will be called ssp.
 
-config SSP_MOTOR
+config SSP_MOTOR_CALLBACK
 	tristate "Sensors support motor"
 	default n
 	depends on SPI

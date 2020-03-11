@@ -57,6 +57,8 @@ obj-$(CONFIG_SENSORS_HRMSENSOR)		+= hrmsensor.o
 
 obj-$(CONFIG_SENSORS_SSP_BBD)           += ssp_bbd.o factory/mcu_bcm4774.o
 obj-$(CONFIG_SENSORS_SSP_BBD)           += bbdpl/
+obj-$(CONFIG_SSP_MOTOR_CALLBACK)        += ssp_motorcallback.o
+
 CURRENT_ANDROID_VERSION := $(shell echo $(ANDROID_VERSION))
 CURRENT_ANDROID_MAJOR_VERSION := $(shell echo $(ANDROID_MAJOR_VERSION))
 
