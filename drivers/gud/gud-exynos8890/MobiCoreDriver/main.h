@@ -93,11 +93,14 @@ ssize_t debug_generic_read(struct file *file, char __user *user_buf,
 int debug_generic_open(struct inode *inode, struct file *file);
 int debug_generic_release(struct inode *inode, struct file *file);
 
-#if KERNEL_VERSION(4, 11, 0) > LINUX_VERSION_CODE
-static inline unsigned int kref_read(struct kref *kref)
-{
-	return atomic_read(&kref->refcount);
-}
-#endif
+// this has been backported globally with commit 
+// https://android.googlesource.com/kernel/common/+/ddb7b1f991e3e62ddb21defa3e39a693e3e7d221%5E%21/#F0 
+// included in  ASB-2020-05-05_3.18 
+//#if KERNEL_VERSION(4, 11, 0) > LINUX_VERSION_CODE
+//static inline unsigned int kref_read(struct kref *kref)
+//{
+//	return atomic_read(&kref->refcount);
+//}
+//#endif
 
 #endif /* _MC_MAIN_H_ */
