@@ -765,14 +765,14 @@ release_sk1:
  */
 
 #ifdef CONFIG_MPTCP
-static void tcp_v4_send_ack(const struct sock *sk, struct sk_buff *skb,
-			    u32 seq, u32 ack, u32 data_ack,
+static void tcp_v4_send_ack(struct net *net,
+			    const struct sock *sk, struct sk_buff *skb,
 			    u32 win, u32 tsval, u32 tsecr, int oif,
 			    struct tcp_md5sig_key *key,
 			    int reply_flags, u8 tos, int mptcp)
 #else
-static void tcp_v4_send_ack(const struct sock *sk, struct sk_buff *skb,
-			    u32 seq, u32 ack,
+static void tcp_v4_send_ack(struct net *net,
+			    const struct sock *sk, struct sk_buff *skb,
 			    u32 win, u32 tsval, u32 tsecr, int oif,
 			    struct tcp_md5sig_key *key,
 			    int reply_flags, u8 tos)
@@ -792,7 +792,6 @@ static void tcp_v4_send_ack(const struct sock *sk, struct sk_buff *skb,
 			];
 	} rep;
 	struct ip_reply_arg arg;
-	struct net *net = sock_net(sk);
 
 	memset(&rep.th, 0, sizeof(struct tcphdr));
 	memset(&arg, 0, sizeof(arg));
@@ -879,7 +878,8 @@ static void tcp_v4_timewait_ack(struct sock *sk, struct sk_buff *skb)
 	}
 #endif
 
-	tcp_v4_send_ack(sk, skb, tcptw->tw_snd_nxt, tcptw->tw_rcv_nxt,
+		tcp_v4_send_ack(sock_net(sk), sk, skb,
+				tcptw->tw_snd_nxt, tcptw->tw_rcv_nxt,
 #ifdef CONFIG_MPTCP
 			data_ack,
 #endif
@@ -907,8 +907,9 @@ void tcp_v4_reqsk_send_ack(struct sock *sk, struct sk_buff *skb,
 	/* sk->sk_state == TCP_LISTEN -> for regular TCP_SYN_RECV
 	 * sk->sk_state == TCP_SYN_RECV -> for Fast Open.
 	 */
-	tcp_v4_send_ack(sk, skb, (sk->sk_state == TCP_LISTEN) ?
-			tcp_rsk(req)->snt_isn + 1 : tcp_sk(sk)->snd_nxt,
+	u32 seq = (sk->sk_state == TCP_LISTEN) ? tcp_rsk(req)->snt_isn + 1 :
+					     tcp_sk(sk)->snd_nxt;
+	tcp_v4_send_ack(sock_net(sk), sk, skb, seq,
 			tcp_rsk(req)->rcv_nxt, 
 #ifdef CONFIG_MPTCP
 			0, 
