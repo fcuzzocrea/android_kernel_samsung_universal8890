@@ -228,6 +228,7 @@ SECTIONS
 	. += IDMAP_DIR_SIZE;
 	swapper_pg_dir = .;
 	. += SWAPPER_DIR_SIZE;
+
 #ifdef CONFIG_ARM64_SW_TTBR0_PAN
 	reserved_ttbr0 = .;
 	. += RESERVED_TTBR0_SIZE;
@@ -237,6 +238,7 @@ SECTIONS
 	. += PAGE_SIZE;
 #endif
 #endif
+
 	_end = .;
 
 	STABS_DEBUG

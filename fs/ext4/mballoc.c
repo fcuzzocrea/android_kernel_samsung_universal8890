@@ -367,6 +367,7 @@ static void ext4_mb_generate_from_pa(struct super_block *sb, void *bitmap,
 static void ext4_mb_generate_from_freelist(struct super_block *sb, void *bitmap,
 						ext4_group_t group);
 
+
 static inline void *mb_correct_addr_and_bit(int *bit, void *addr)
 {
 #if BITS_PER_LONG == 64
@@ -2842,7 +2843,9 @@ static inline int ext4_issue_discard(struct super_block *sb,
 
 static void ext4_free_data_in_buddy(struct super_block *sb,
 				    struct ext4_free_data *entry)
+
 {
+
 	struct ext4_buddy e4b;
 	struct ext4_group_info *db;
 	int err, count = 0, count2 = 0;
@@ -2850,9 +2853,11 @@ static void ext4_free_data_in_buddy(struct super_block *sb,
 	mb_debug(1, "gonna free %u blocks in group %u (0x%p):",
 		 entry->efd_count, entry->efd_group, entry);
 
+
 	err = ext4_mb_load_buddy(sb, entry->efd_group, &e4b);
 	/* we expect to find existing buddy because it's pinned */
 	BUG_ON(err != 0);
+
 
 	db = e4b.bd_info;
 	/* there are blocks to put in buddy to make them really free */
@@ -4737,6 +4742,7 @@ ext4_mb_free_metadata(handle_t *handle, struct ext4_buddy *e4b,
 		entry = rb_entry(node, struct ext4_free_data, efd_node);
 		ext4_try_merge_freed_extent(sbi, entry, new_entry,
 					    &(db->bb_free_root));
+
 	}
 
 	node = rb_next(new_node);
@@ -4744,6 +4750,7 @@ ext4_mb_free_metadata(handle_t *handle, struct ext4_buddy *e4b,
 		entry = rb_entry(node, struct ext4_free_data, efd_node);
 		ext4_try_merge_freed_extent(sbi, entry, new_entry,
 					    &(db->bb_free_root));
+
 	}
 
 	spin_lock(&sbi->s_md_lock);
@@ -4799,11 +4806,14 @@ void ext4_free_blocks(handle_t *handle, struct inode *inode,
 
 	if (bh && (flags & EXT4_FREE_BLOCKS_FORGET)) {
 		BUG_ON(count > 1);
+
 		ext4_forget(handle, flags & EXT4_FREE_BLOCKS_METADATA,
 			    inode, bh, block);
 	}
 
+
 	/*
+
 	 * If the extent to be freed does not begin on a cluster
 	 * boundary, we need to deal with partial clusters at the
 	 * beginning and end of the extent.  Normally we will free

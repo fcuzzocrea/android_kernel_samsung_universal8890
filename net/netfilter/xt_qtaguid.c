@@ -518,10 +518,12 @@ static struct tag_ref *get_tag_ref(tag_t full_tag,
 
 	DR_DEBUG("qtaguid: get_tag_ref(0x%llx)\n",
 		 full_tag);
+
 	tr_entry = lookup_tag_ref(full_tag, &utd_entry);
 	BUG_ON(IS_ERR_OR_NULL(utd_entry));
 	if (!tr_entry)
 		tr_entry = new_tag_ref(full_tag, utd_entry);
+
 
 	if (utd_res)
 		*utd_res = utd_entry;
@@ -2309,6 +2311,7 @@ static int ctrl_cmd_tag(const char *input)
 		sock_tag_entry->sk = el_socket->sk;
 		sock_tag_entry->pid = current->tgid;
 		sock_tag_entry->tag = combine_atag_with_uid(acct_tag, uid_int);
+
 		pqd_entry = proc_qtu_data_tree_search(
 			&proc_qtu_data_tree, current->tgid);
 		/*
@@ -2327,6 +2330,7 @@ static int ctrl_cmd_tag(const char *input)
 			list_add(&sock_tag_entry->list,
 				 &pqd_entry->sock_tag_list);
 
+
 		sock_tag_tree_insert(sock_tag_entry, &sock_tag_tree);
 		atomic64_inc(&qtu_events.sockets_tagged);
 	}
@@ -2338,6 +2342,7 @@ static int ctrl_cmd_tag(const char *input)
 		 atomic_read(&el_socket->sk->sk_refcnt));
 	sockfd_put(el_socket);
 	return 0;
+
 
 err_put:
 	CT_DEBUG("qtaguid: ctrl_tag(%s): done. ...->sk_refcnt=%d\n",

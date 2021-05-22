@@ -944,6 +944,8 @@ asmlinkage int syscall_trace_enter(struct pt_regs *regs, int scno)
 	secure_computing_strict(current_thread_info()->syscall);
 #endif
 	/* Tracer or seccomp may have changed syscall. */
+
+
 	scno = current_thread_info()->syscall;
 
 	if (test_thread_flag(TIF_SYSCALL_TRACEPOINT))
