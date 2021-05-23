@@ -181,6 +181,7 @@ static inline void snd_compr_drain_notify(struct snd_compr_stream *stream)
 		stream->runtime->state = SNDRV_PCM_STATE_RUNNING;
 	else
 		stream->runtime->state = SNDRV_PCM_STATE_SETUP;
+
 	wake_up(&stream->runtime->sleep);
 }
 
