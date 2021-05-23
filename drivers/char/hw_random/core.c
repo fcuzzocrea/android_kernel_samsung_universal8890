@@ -87,7 +87,7 @@ static void add_early_randomness(struct hwrng *rng)
 	int bytes_read;
 
 	mutex_lock(&reading_mutex);
-	bytes_read = rng_get_data(rng, bytes, sizeof(bytes), 1);
+	bytes_read = rng_get_data(rng, bytes, sizeof(bytes), 0);
 	mutex_unlock(&reading_mutex);
 	if (bytes_read > 0)
 		add_device_randomness(bytes, bytes_read);
@@ -169,6 +169,7 @@ static inline int hwrng_init(struct hwrng *rng)
 	return 0;
 }
 
+
 static int rng_dev_open(struct inode *inode, struct file *filp)
 {
 	/* enforce read-only access to this chrdev */
@@ -213,6 +214,7 @@ static ssize_t rng_dev_read(struct file *filp, char __user *buf,
 			goto out;
 		}
 		if (!rng) {
+
 			err = -ENODEV;
 			goto out;
 		}
@@ -322,6 +324,7 @@ static ssize_t hwrng_attr_current_show(struct device *dev,
 				       struct device_attribute *attr,
 				       char *buf)
 {
+
 	ssize_t ret;
 	struct hwrng *rng;
 
@@ -331,6 +334,7 @@ static ssize_t hwrng_attr_current_show(struct device *dev,
 
 	ret = snprintf(buf, PAGE_SIZE, "%s\n", rng ? rng->name : "none");
 	put_rng(rng);
+
 
 	return ret;
 }
@@ -486,6 +490,7 @@ int hwrng_register(struct hwrng *rng)
 		err = register_miscdev();
 		if (err) {
 			drop_current_rng();
+
 			goto out_unlock;
 		}
 	}
@@ -512,6 +517,7 @@ EXPORT_SYMBOL_GPL(hwrng_register);
 
 void hwrng_unregister(struct hwrng *rng)
 {
+
 	mutex_lock(&rng_mutex);
 
 	list_del(&rng->list);
