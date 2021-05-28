@@ -1187,6 +1187,7 @@ static void ufshcd_exit_clk_gating(struct ufs_hba *hba)
 	destroy_workqueue(hba->ufshcd_workq);
 	device_remove_file(hba->dev, &hba->clk_gating.delay_attr);
 
+
 }
 
 #if defined(CONFIG_PM_DEVFREQ)
@@ -2198,6 +2199,7 @@ out_put_tag:
 int ufshcd_prep_query(struct ufs_hba *hba, enum query_opcode op,
 		u8 idn, u8 idx, u8 sel, u32 *qry_val)
 
+
 {
 	struct ufs_query_req *request;
 	struct ufs_query_res *response;
@@ -2266,10 +2268,14 @@ static int ufshcd_query_flag(struct ufs_hba *hba, enum query_opcode opcode,
 	mutex_lock(&hba->dev_cmd.lock);
 
 
+
 	err = ufshcd_prep_query(hba, opcode, idn, 0, 0, NULL);
 	if (err)
 
+
 		goto out_unlock;
+
+
 
 
 	/* Send query request */
@@ -2323,10 +2329,13 @@ static int ufshcd_query_attr(struct ufs_hba *hba, enum query_opcode opcode,
 	mutex_lock(&hba->dev_cmd.lock);
 
 
+
 	err = ufshcd_prep_query(hba, opcode, idn, index, selector, attr_val);
 	if (err)
 
+
 		goto out_unlock;
+
 
 
 	/* send query request */
@@ -2392,10 +2401,14 @@ static int ufshcd_query_descriptor(struct ufs_hba *hba,
 	mutex_lock(&hba->dev_cmd.lock);
 
 
+
 	err = ufshcd_prep_query(hba, opcode, idn, index, selector, NULL);
 	if (err)
 
+
 		goto out_unlock;
+
+
 
 
 	request = &hba->dev_cmd.query.request;
@@ -3934,6 +3947,7 @@ static int ufshcd_task_req_compl(struct ufs_hba *hba, u32 index, u8 *resp)
 	spin_lock_irqsave(hba->host->host_lock, flags);
 
 
+
 	task_req_descp = hba->utmrdl_base_addr;
 	ocs_value = ufshcd_get_tmr_ocs(&task_req_descp[index]);
 
@@ -4590,6 +4604,7 @@ static void ufshcd_err_handler(struct work_struct *work)
 
 		}
 
+
 		hba->saved_err = 0;
 		hba->saved_uic_err = 0;
 	}
@@ -4758,6 +4773,7 @@ static int ufshcd_clear_tm_cmd(struct ufs_hba *hba, int tag)
 	int err = 0;
 	u32 mask = 1 << tag;
 	unsigned long flags;
+
 
 
 	spin_lock_irqsave(hba->host->host_lock, flags);
@@ -5131,6 +5147,7 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 	ufshcd_set_eh_in_progress(hba);
 	ufshcd_hba_stop(hba);
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
+
 
 
 	/* Establish the link again and restore the device */
@@ -5610,6 +5627,7 @@ retry:
 		}
 
 
+
 		pm_runtime_put_sync(hba->dev);
 	}
 
@@ -5961,12 +5979,14 @@ static inline int ufshcd_config_vreg_lpm(struct ufs_hba *hba,
 					 struct ufs_vreg *vreg)
 {
 
+
 	return ufshcd_config_vreg_load(hba->dev, vreg, UFS_VREG_LPM_LOAD_UA);
 }
 
 static inline int ufshcd_config_vreg_hpm(struct ufs_hba *hba,
 					 struct ufs_vreg *vreg)
 {
+
 
 	return ufshcd_config_vreg_load(hba->dev, vreg, vreg->max_uA);
 }
@@ -6675,6 +6695,7 @@ static int ufshcd_suspend(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 		goto set_dev_active;
 
 
+
 disable_clks:
 #if defined(CONFIG_PM_DEVFREQ)
 	/*
@@ -6691,9 +6712,12 @@ disable_clks:
 	/*
 	 * Flush pending works before clock is disabled
 
+
 	 */
 	cancel_work_sync(&hba->eh_work);
 	cancel_work_sync(&hba->eeh_work);
+
+
 
 
 	/*
@@ -6732,6 +6756,7 @@ disable_clks:
 	/* Put the host controller in low power mode if possible */
 	ufshcd_hba_vreg_set_lpm(hba);
 	goto out;
+
 
 
 set_link_active:
@@ -6793,6 +6818,8 @@ static int ufshcd_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	old_link_state = hba->uic_link_state;
 
 	ufshcd_hba_vreg_set_hpm(hba);
+
+
 
 
 	ret = ufshcd_vreg_set_hpm(hba);
@@ -6868,6 +6895,7 @@ set_old_link_state:
 vendor_suspend:
 	if (hba->vops && hba->vops->suspend)
 		hba->vops->suspend(hba, pm_op);
+
 
 disable_irq_and_vops_clks:
 	ufshcd_disable_irq(hba);
@@ -7687,6 +7715,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	}
 
 #if defined(CONFIG_PM_DEVFREQ)
+
 
 	if (ufshcd_is_clkscaling_enabled(hba)) {
 		hba->devfreq = devfreq_add_device(dev, &ufs_devfreq_profile,

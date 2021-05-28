@@ -282,6 +282,7 @@
 
 #include <asm/uaccess.h>
 #include <asm/ioctls.h>
+#include <asm/unaligned.h>
 #include <net/busy_poll.h>
 
 int sysctl_tcp_fin_timeout __read_mostly = TCP_FIN_TIMEOUT;
@@ -2482,6 +2483,7 @@ int tcp_disconnect(struct sock *sk, int flags)
 	tp->window_clamp = 0;
 	tcp_set_ca_state(sk, TCP_CA_Open);
 	tcp_clear_retrans(tp);
+	tp->total_retrans = 0;
 	inet_csk_delack_init(sk);
 	/* Initialize rcv_mss to TCP_MIN_MSS to avoid division by 0
 	 * issue in __tcp_select_window()
@@ -2910,6 +2912,7 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 	u32 now = tcp_time_stamp;
 	unsigned int start;
+	u64 rate64;
 	u32 rate;
 
 	memset(info, 0, sizeof(*info));
@@ -2972,10 +2975,12 @@ void tcp_get_info(struct sock *sk, struct tcp_info *info)
 	info->tcpi_total_retrans = tp->total_retrans;
 
 	rate = READ_ONCE(sk->sk_pacing_rate);
-	info->tcpi_pacing_rate = rate != ~0U ? rate : ~0ULL;
+	rate64 = rate != ~0U ? rate : ~0ULL;
+	put_unaligned(rate64, &info->tcpi_pacing_rate);
 
 	rate = READ_ONCE(sk->sk_max_pacing_rate);
-	info->tcpi_max_pacing_rate = rate != ~0U ? rate : ~0ULL;
+	rate64 = rate != ~0U ? rate : ~0ULL;
+	put_unaligned(rate64, &info->tcpi_max_pacing_rate);
 
 	do {
 		start = u64_stats_fetch_begin_irq(&tp->syncp);
