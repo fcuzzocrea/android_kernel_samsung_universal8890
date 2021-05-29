@@ -1553,7 +1553,6 @@ event_sched_out(struct perf_event *event,
 		event->state = PERF_EVENT_STATE_OFF;
 	}
 
-
 	if (!is_software_event(event))
 		cpuctx->active_oncpu--;
 	ctx->nr_active--;
@@ -3316,7 +3315,6 @@ find_lively_task_by_vpid(pid_t vpid)
 
 	return task;
 
-
 }
 
 /*
@@ -3677,14 +3675,12 @@ static int perf_event_read_group(struct perf_event *event,
 				   u64 read_format, char __user *buf)
 {
 	struct perf_event *leader = event->group_leader, *sub;
-
 	struct perf_event_context *ctx = leader->ctx;
 	int n = 0, size = 0, ret;
 	u64 count, enabled, running;
 	u64 values[5];
 
 	lockdep_assert_held(&ctx->mutex);
-
 
 	count = perf_event_read_value(leader, &enabled, &running);
 
@@ -3715,12 +3711,10 @@ static int perf_event_read_group(struct perf_event *event,
 
 		if (copy_to_user(buf + ret, values, size)) {
 			return -EFAULT;
-
 		}
 
 		ret += size;
 	}
-
 
 	return ret;
 }
@@ -3865,7 +3859,6 @@ static void perf_event_for_each(struct perf_event *event,
 	perf_event_for_each_child(event, func);
 	list_for_each_entry(sibling, &event->sibling_list, group_entry)
 		perf_event_for_each_child(sibling, func);
-
 }
 
 struct period_event {
@@ -3979,7 +3972,6 @@ static int perf_event_set_filter(struct perf_event *event, void __user *arg);
 
 static long _perf_ioctl(struct perf_event *event, unsigned int cmd, unsigned long arg)
 {
-
 	void (*func)(struct perf_event *);
 	u32 flags = arg;
 
@@ -4892,7 +4884,6 @@ static void perf_output_read_one(struct perf_output_handle *handle,
 	__output_copy(handle, values, n * sizeof(u64));
 }
 
-
 static void perf_output_read_group(struct perf_output_handle *handle,
 			    struct perf_event *event,
 			    u64 enabled, u64 running)
@@ -5364,7 +5355,6 @@ static void perf_event_task_output(struct perf_event *event,
 		goto out;
 
 	task_event->event_id.pid = perf_event_pid(event, task);
-
 	task_event->event_id.tid = perf_event_tid(event, task);
 
 	if (task_event->event_id.header.type == PERF_RECORD_EXIT) {
@@ -5898,7 +5888,6 @@ struct swevent_htable {
 
 	/* Recursion avoidance in each contexts */
 	int				recursion[PERF_NR_CONTEXTS];
-
 };
 
 static DEFINE_PER_CPU(struct swevent_htable, swevent_htable);
@@ -6115,13 +6104,10 @@ void ___perf_sw_event(u32 event_id, u64 nr, struct pt_regs *regs, u64 addr)
 {
 	struct perf_sample_data data;
 
-
 	if (WARN_ON_ONCE(!regs))
-
 		return;
 
 	perf_sample_data_init(&data, addr, 0);
-
 	do_perf_sw_event(PERF_TYPE_SOFTWARE, event_id, nr, &data, regs);
 }
 
@@ -6160,9 +6146,7 @@ static int perf_swevent_add(struct perf_event *event, int flags)
 
 	head = find_swevent_head(swhash, event);
 	if (WARN_ON_ONCE(!head))
-
 		return -EINVAL;
-
 
 	hlist_add_head_rcu(&event->hlist_entry, head);
 
@@ -6229,7 +6213,6 @@ static int swevent_hlist_get_cpu(struct perf_event *event, int cpu)
 	int err = 0;
 
 	mutex_lock(&swhash->hlist_mutex);
-
 	if (!swevent_hlist_deref(swhash) && cpu_online(cpu)) {
 		struct swevent_hlist *hlist;
 
@@ -6993,7 +6976,6 @@ skip_type:
 		__perf_event_init_context(&cpuctx->ctx);
 		lockdep_set_class(&cpuctx->ctx.mutex, &cpuctx_mutex);
 		lockdep_set_class(&cpuctx->ctx.lock, &cpuctx_lock);
-
 		cpuctx->ctx.pmu = pmu;
 
 		__perf_cpu_hrtimer_init(cpuctx, cpu);
@@ -7638,7 +7620,6 @@ SYSCALL_DEFINE5(perf_event_open,
 		}
 	}
 
-
 	/*
 	 * Special case software events and allow them to be part of
 	 * any hardware group.
@@ -7678,7 +7659,6 @@ SYSCALL_DEFINE5(perf_event_open,
 	}
 
 
-
 	/*
 	 * Look up the group leader (we will attach this event to it):
 	 */
@@ -7697,7 +7677,6 @@ SYSCALL_DEFINE5(perf_event_open,
 		 * you can never concurrently schedule them anyhow.
 		 */
 		if (group_leader->cpu != event->cpu)
-
 			goto err_context;
 
 		/*
@@ -7714,7 +7693,6 @@ SYSCALL_DEFINE5(perf_event_open,
 		 */
 		if (!move_group && group_leader->ctx != ctx)
 			goto err_context;
-
 
 		/*
 		 * Only a group leader can be exclusive or pinned
@@ -7786,7 +7764,6 @@ SYSCALL_DEFINE5(perf_event_open,
 	}
 
 	WARN_ON_ONCE(ctx->parent_ctx);
-
 
 	if (move_group) {
 		/*
@@ -7949,9 +7926,7 @@ void perf_pmu_migrate_context(struct pmu *pmu, int src_cpu, int dst_cpu)
 		list_add(&event->migrate_entry, &events);
 	}
 
-
 	synchronize_rcu();
-
 
 	list_for_each_entry_safe(event, tmp, &events, migrate_entry) {
 		list_del(&event->migrate_entry);
@@ -8488,7 +8463,6 @@ static void perf_event_init_cpu(int cpu)
 	struct swevent_htable *swhash = &per_cpu(swevent_htable, cpu);
 
 	mutex_lock(&swhash->hlist_mutex);
-
 	if (swhash->hlist_refcount > 0) {
 		struct swevent_hlist *hlist;
 
@@ -8541,9 +8515,7 @@ static void perf_event_exit_cpu_context(int cpu)
 
 static void perf_event_exit_cpu(int cpu)
 {
-
 	perf_event_exit_cpu_context(cpu);
-
 }
 #else
 static inline void perf_event_exit_cpu(int cpu) { }
