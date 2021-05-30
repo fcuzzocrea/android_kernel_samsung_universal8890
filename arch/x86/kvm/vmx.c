@@ -45,6 +45,7 @@
 #include <asm/perf_event.h>
 #include <asm/debugreg.h>
 #include <asm/kexec.h>
+#include <asm/nospec-branch.h>
 
 #include "trace.h"
 
@@ -725,8 +726,18 @@ static const int max_vmcs_field = ARRAY_SIZE(vmcs_field_to_offset_table);
 
 static inline short vmcs_field_to_offset(unsigned long field)
 {
-	if (field >= max_vmcs_field || vmcs_field_to_offset_table[field] == 0)
+	if (field >= ARRAY_SIZE(vmcs_field_to_offset_table))
 		return -1;
+
+	/*
+	 * FIXME: Mitigation for CVE-2017-5753.  To be replaced with a
+	 * generic mechanism.
+	 */
+	asm("lfence");
+
+	if (vmcs_field_to_offset_table[field] == 0)
+		return -1;
+
 	return vmcs_field_to_offset_table[field];
 }
 
@@ -7779,6 +7790,9 @@ static void __noclone vmx_vcpu_run(struct kvm_vcpu *vcpu)
 		, "eax", "ebx", "edi", "esi"
 #endif
 	      );
+
+	/* Eliminate branch target predictions from guest mode */
+	vmexit_fill_RSB();
 
 	/* MSR_IA32_DEBUGCTLMSR is zeroed on vmexit. Restore it if needed */
 	if (debugctlmsr)

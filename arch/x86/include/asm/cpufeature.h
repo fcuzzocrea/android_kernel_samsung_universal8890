@@ -189,6 +189,10 @@
 #define X86_FEATURE_DTHERM	( 7*32+ 7) /* Digital Thermal Sensor */
 #define X86_FEATURE_HW_PSTATE	( 7*32+ 8) /* AMD HW-PState */
 #define X86_FEATURE_PROC_FEEDBACK ( 7*32+ 9) /* AMD ProcFeedbackInterface */
+#define X86_FEATURE_RSB_CTXSW	( 7*32+19) /* Fill RSB on context switches */
+
+#define X86_FEATURE_RETPOLINE	( 7*32+29) /* Generic Retpoline mitigation for Spectre variant 2 */
+#define X86_FEATURE_RETPOLINE_AMD ( 7*32+30) /* AMD Retpoline mitigation for Spectre variant 2 */
 
 /* Virtualization flags: Linux defined, word 8 */
 #define X86_FEATURE_TPR_SHADOW  ( 8*32+ 0) /* Intel TPR Shadow */
@@ -249,6 +253,9 @@
 #define X86_BUG_11AP		X86_BUG(5) /* Bad local APIC aka 11AP */
 #define X86_BUG_FXSAVE_LEAK	X86_BUG(6) /* FXSAVE leaks FOP/FIP/FOP */
 #define X86_BUG_CLFLUSH_MONITOR	X86_BUG(7) /* AAI65, CLFLUSH required before MONITOR */
+#define X86_BUG_CPU_MELTDOWN	X86_BUG(14) /* CPU is affected by meltdown attack and needs kernel page table isolation */
+#define X86_BUG_SPECTRE_V1	X86_BUG(15) /* CPU is affected by Spectre variant 1 attack with conditional branches */
+#define X86_BUG_SPECTRE_V2	X86_BUG(16) /* CPU is affected by Spectre variant 2 attack with indirect branches */
 
 #if defined(__KERNEL__) && !defined(__ASSEMBLY__)
 
@@ -331,6 +338,8 @@ extern const char * const x86_bug_flags[NBUGINTS*32];
 	set_bit(bit, (unsigned long *)cpu_caps_set);	\
 } while (0)
 
+#define setup_force_cpu_bug(bit) setup_force_cpu_cap(bit)
+
 #define cpu_has_fpu		boot_cpu_has(X86_FEATURE_FPU)
 #define cpu_has_de		boot_cpu_has(X86_FEATURE_DE)
 #define cpu_has_pse		boot_cpu_has(X86_FEATURE_PSE)
@@ -411,6 +420,7 @@ static __always_inline __pure bool __static_cpu_has(u16 bit)
 			 " .word %P0\n"		/* 1: do replace */
 			 " .byte 2b - 1b\n"	/* source len */
 			 " .byte 0\n"		/* replacement len */
+			 " .byte 0\n"		/* pad len */
 			 ".previous\n"
 			 /* skipping size check since replacement size = 0 */
 			 : : "i" (X86_FEATURE_ALWAYS) : : t_warn);
@@ -425,6 +435,7 @@ static __always_inline __pure bool __static_cpu_has(u16 bit)
 			 " .word %P0\n"		/* feature bit */
 			 " .byte 2b - 1b\n"	/* source len */
 			 " .byte 0\n"		/* replacement len */
+			 " .byte 0\n"		/* pad len */
 			 ".previous\n"
 			 /* skipping size check since replacement size = 0 */
 			 : : "i" (bit) : : t_no);
@@ -450,6 +461,7 @@ static __always_inline __pure bool __static_cpu_has(u16 bit)
 			     " .word %P1\n"		/* feature bit */
 			     " .byte 2b - 1b\n"		/* source len */
 			     " .byte 4f - 3f\n"		/* replacement len */
+			     " .byte 0\n"		/* pad len */
 			     ".previous\n"
 			     ".section .discard,\"aw\",@progbits\n"
 			     " .byte 0xff + (4f-3f) - (2b-1b)\n" /* size check */
@@ -484,23 +496,28 @@ static __always_inline __pure bool _static_cpu_has_safe(u16 bit)
  */
 		asm_volatile_goto("1: .byte 0xe9\n .long %l[t_dynamic] - 2f\n"
 			 "2:\n"
+			 ".skip -(((5f-4f) - (2b-1b)) > 0) * "
+			         "((5f-4f) - (2b-1b)),0x90\n"
+			 "3:\n"
 			 ".section .altinstructions,\"a\"\n"
 			 " .long 1b - .\n"		/* src offset */
-			 " .long 3f - .\n"		/* repl offset */
+			 " .long 4f - .\n"		/* repl offset */
 			 " .word %P1\n"			/* always replace */
-			 " .byte 2b - 1b\n"		/* src len */
-			 " .byte 4f - 3f\n"		/* repl len */
+			 " .byte 3b - 1b\n"		/* src len */
+			 " .byte 5f - 4f\n"		/* repl len */
+			 " .byte 3b - 2b\n"		/* pad len */
 			 ".previous\n"
 			 ".section .altinstr_replacement,\"ax\"\n"
-			 "3: .byte 0xe9\n .long %l[t_no] - 2b\n"
-			 "4:\n"
+			 "4: .byte 0xe9\n .long %l[t_no] - 2b\n"
+			 "5:\n"
 			 ".previous\n"
 			 ".section .altinstructions,\"a\"\n"
 			 " .long 1b - .\n"		/* src offset */
 			 " .long 0\n"			/* no replacement */
 			 " .word %P0\n"			/* feature bit */
-			 " .byte 2b - 1b\n"		/* src len */
+			 " .byte 3b - 1b\n"		/* src len */
 			 " .byte 0\n"			/* repl len */
+			 " .byte 0\n"			/* pad len */
 			 ".previous\n"
 			 : : "i" (bit), "i" (X86_FEATURE_ALWAYS)
 			 : : t_dynamic, t_no);
@@ -520,6 +537,7 @@ static __always_inline __pure bool _static_cpu_has_safe(u16 bit)
 			     " .word %P2\n"		/* always replace */
 			     " .byte 2b - 1b\n"		/* source len */
 			     " .byte 4f - 3f\n"		/* replacement len */
+			     " .byte 0\n"		/* pad len */
 			     ".previous\n"
 			     ".section .discard,\"aw\",@progbits\n"
 			     " .byte 0xff + (4f-3f) - (2b-1b)\n" /* size check */
@@ -534,6 +552,7 @@ static __always_inline __pure bool _static_cpu_has_safe(u16 bit)
 			     " .word %P1\n"		/* feature bit */
 			     " .byte 4b - 3b\n"		/* src len */
 			     " .byte 6f - 5f\n"		/* repl len */
+			     " .byte 0\n"		/* pad len */
 			     ".previous\n"
 			     ".section .discard,\"aw\",@progbits\n"
 			     " .byte 0xff + (6f-5f) - (4b-3b)\n" /* size check */

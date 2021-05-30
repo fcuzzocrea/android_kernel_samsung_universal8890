@@ -1673,6 +1673,9 @@ static int kvm_guest_time_update(struct kvm_vcpu *v)
 		&guest_hv_clock, sizeof(guest_hv_clock))))
 		return 0;
 
+	if (guest_hv_clock.version & 1)
+		++guest_hv_clock.version;  /* first time write, random junk */
+
 	/* retain PVCLOCK_GUEST_STOPPED if set in guest copy */
 	pvclock_flags = (guest_hv_clock.flags & PVCLOCK_GUEST_STOPPED);
 
@@ -2933,6 +2936,12 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 	kvm_x86_ops->vcpu_put(vcpu);
 	kvm_put_guest_fpu(vcpu);
 	vcpu->arch.last_host_tsc = native_read_tsc();
+	/*
+	 * If userspace has set any breakpoints or watchpoints, dr6 is restored
+	 * on every vmexit, but if not, we might have a stale dr6 from the
+	 * guest. do_debug expects dr6 to be cleared after it runs, do the same.
+	 */
+	set_debugreg(0, 6);
 }
 
 static int kvm_vcpu_ioctl_get_lapic(struct kvm_vcpu *vcpu,
@@ -4189,7 +4198,7 @@ static int vcpu_mmio_read(struct kvm_vcpu *vcpu, gpa_t addr, int len, void *v)
 		      !kvm_iodevice_read(&vcpu->arch.apic->dev, addr, n, v))
 		    && kvm_io_bus_read(vcpu->kvm, KVM_MMIO_BUS, addr, n, v))
 			break;
-		trace_kvm_mmio(KVM_TRACE_MMIO_READ, n, addr, *(u64 *)v);
+		trace_kvm_mmio(KVM_TRACE_MMIO_READ, n, addr, v);
 		handled += n;
 		addr += n;
 		len -= n;
@@ -4435,7 +4444,7 @@ static int read_prepare(struct kvm_vcpu *vcpu, void *val, int bytes)
 {
 	if (vcpu->mmio_read_completed) {
 		trace_kvm_mmio(KVM_TRACE_MMIO_READ, bytes,
-			       vcpu->mmio_fragments[0].gpa, *(u64 *)val);
+			       vcpu->mmio_fragments[0].gpa, val);
 		vcpu->mmio_read_completed = 0;
 		return 1;
 	}
@@ -4457,14 +4466,14 @@ static int write_emulate(struct kvm_vcpu *vcpu, gpa_t gpa,
 
 static int write_mmio(struct kvm_vcpu *vcpu, gpa_t gpa, int bytes, void *val)
 {
-	trace_kvm_mmio(KVM_TRACE_MMIO_WRITE, bytes, gpa, *(u64 *)val);
+	trace_kvm_mmio(KVM_TRACE_MMIO_WRITE, bytes, gpa, val);
 	return vcpu_mmio_write(vcpu, gpa, bytes, val);
 }
 
 static int read_exit_mmio(struct kvm_vcpu *vcpu, gpa_t gpa,
 			  void *val, int bytes)
 {
-	trace_kvm_mmio(KVM_TRACE_MMIO_READ_UNSATISFIED, bytes, gpa, 0);
+	trace_kvm_mmio(KVM_TRACE_MMIO_READ_UNSATISFIED, bytes, gpa, NULL);
 	return X86EMUL_IO_NEEDED;
 }
 
