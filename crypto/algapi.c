@@ -51,6 +51,7 @@ static int crypto_check_alg(struct crypto_alg *alg)
 		return -EACCES;
 	}
 #endif
+
 	
 	if (alg->cra_alignmask & (alg->cra_alignmask + 1))
 		return -EINVAL;
@@ -395,6 +396,8 @@ int crypto_register_alg(struct crypto_alg *alg)
 {
 	struct crypto_larval *larval;
 	int err;
+
+	alg->cra_flags &= ~CRYPTO_ALG_DEAD;
 
 #ifdef CONFIG_CRYPTO_FIPS
 	if (unlikely(in_fips_err())) {
