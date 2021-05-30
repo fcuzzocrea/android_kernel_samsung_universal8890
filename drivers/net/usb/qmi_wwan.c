@@ -438,7 +438,7 @@ next_desc:
 	}
 
 	/* errors aren't fatal - we can live with the dynamic address */
-	if (cdc_ether) {
+	if (cdc_ether && cdc_ether->wMaxSegmentSize) {
 		dev->hard_mtu = le16_to_cpu(cdc_ether->wMaxSegmentSize);
 		usbnet_get_ethernet_addr(dev, cdc_ether->iMACAddress);
 	}
@@ -752,7 +752,7 @@ static const struct usb_device_id products[] = {
 	{QMI_FIXED_INTF(0x05c6, 0x9011, 4)},
 	{QMI_FIXED_INTF(0x05c6, 0x9021, 1)},
 	{QMI_FIXED_INTF(0x05c6, 0x9022, 2)},
-	{QMI_FIXED_INTF(0x05c6, 0x9025, 4)},	/* Alcatel-sbell ASB TL131 TDD LTE  (China Mobile) */
+	{QMI_QUIRK_SET_DTR(0x05c6, 0x9025, 4)},	/* Alcatel-sbell ASB TL131 TDD LTE (China Mobile) */
 	{QMI_FIXED_INTF(0x05c6, 0x9026, 3)},
 	{QMI_FIXED_INTF(0x05c6, 0x902e, 5)},
 	{QMI_FIXED_INTF(0x05c6, 0x9031, 5)},
