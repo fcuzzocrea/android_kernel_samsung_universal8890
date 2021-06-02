@@ -449,9 +449,9 @@ static int btree_read_extent_buffer_pages(struct btrfs_root *root,
 	int mirror_num = 0;
 	int failed_mirror = 0;
 
-	clear_bit(EXTENT_BUFFER_CORRUPT, &eb->bflags);
 	io_tree = &BTRFS_I(root->fs_info->btree_inode)->io_tree;
 	while (1) {
+		clear_bit(EXTENT_BUFFER_CORRUPT, &eb->bflags);
 		ret = read_extent_buffer_pages(io_tree, eb, start,
 					       WAIT_COMPLETE,
 					       btree_get_extent, mirror_num);
@@ -462,14 +462,6 @@ static int btree_read_extent_buffer_pages(struct btrfs_root *root,
 			else
 				ret = -EIO;
 		}
-
-		/*
-		 * This buffer's crc is fine, but its contents are corrupted, so
-		 * there is no reason to read the other copies, they won't be
-		 * any less wrong.
-		 */
-		if (test_bit(EXTENT_BUFFER_CORRUPT, &eb->bflags))
-			break;
 
 		num_copies = btrfs_num_copies(root->fs_info,
 					      eb->start, eb->len);
@@ -535,9 +527,10 @@ static int check_tree_block_fsid(struct btrfs_root *root,
 }
 
 #define CORRUPT(reason, eb, root, slot)				\
-	btrfs_crit(root->fs_info, "corrupt leaf, %s: block=%llu,"	\
-		   "root=%llu, slot=%d", reason,			\
-	       btrfs_header_bytenr(eb),	root->objectid, slot)
+	btrfs_crit(root->fs_info, "corrupt %s, %s: block=%llu,"	\
+		   " root=%llu, slot=%d",			\
+		   btrfs_header_level(eb) == 0 ? "leaf" : "node",\
+		   reason, btrfs_header_bytenr(eb), root->objectid, slot)
 
 static noinline int check_leaf(struct btrfs_root *root,
 			       struct extent_buffer *leaf)
@@ -546,6 +539,42 @@ static noinline int check_leaf(struct btrfs_root *root,
 	struct btrfs_key leaf_key;
 	u32 nritems = btrfs_header_nritems(leaf);
 	int slot;
+
+	/*
+	 * Extent buffers from a relocation tree have a owner field that
+	 * corresponds to the subvolume tree they are based on. So just from an
+	 * extent buffer alone we can not find out what is the id of the
+	 * corresponding subvolume tree, so we can not figure out if the extent
+	 * buffer corresponds to the root of the relocation tree or not. So skip
+	 * this check for relocation trees.
+	 */
+	if (nritems == 0 && !btrfs_header_flag(leaf, BTRFS_HEADER_FLAG_RELOC)) {
+		struct btrfs_root *check_root;
+
+		key.objectid = btrfs_header_owner(leaf);
+		key.type = BTRFS_ROOT_ITEM_KEY;
+		key.offset = (u64)-1;
+
+		check_root = btrfs_get_fs_root(root->fs_info, &key, false);
+		/*
+		 * The only reason we also check NULL here is that during
+		 * open_ctree() some roots has not yet been set up.
+		 */
+		if (!IS_ERR_OR_NULL(check_root)) {
+			struct extent_buffer *eb;
+
+			eb = btrfs_root_node(check_root);
+			/* if leaf is the root, then it's fine */
+			if (leaf != eb) {
+				CORRUPT("non-root leaf's nritems is 0",
+					leaf, check_root, 0);
+				free_extent_buffer(eb);
+				return -EIO;
+			}
+			free_extent_buffer(eb);
+		}
+		return 0;
+	}
 
 	if (nritems == 0)
 		return 0;
@@ -598,6 +627,42 @@ static noinline int check_leaf(struct btrfs_root *root,
 	}
 
 	return 0;
+}
+
+static int check_node(struct btrfs_root *root, struct extent_buffer *node)
+{
+	unsigned long nr = btrfs_header_nritems(node);
+	struct btrfs_key key, next_key;
+	int slot;
+	u64 bytenr;
+	int ret = 0;
+
+	if (nr == 0 || nr > BTRFS_NODEPTRS_PER_BLOCK(root)) {
+		btrfs_crit(root->fs_info,
+			   "corrupt node: block %llu root %llu nritems %lu",
+			   node->start, root->objectid, nr);
+		return -EIO;
+	}
+
+	for (slot = 0; slot < nr - 1; slot++) {
+		bytenr = btrfs_node_blockptr(node, slot);
+		btrfs_node_key_to_cpu(node, &key, slot);
+		btrfs_node_key_to_cpu(node, &next_key, slot + 1);
+
+		if (!bytenr) {
+			CORRUPT("invalid item slot", node, root, slot);
+			ret = -EIO;
+			goto out;
+		}
+
+		if (btrfs_comp_cpu_keys(&key, &next_key) >= 0) {
+			CORRUPT("bad key order", node, root, slot);
+			ret = -EIO;
+			goto out;
+		}
+	}
+out:
+	return ret;
 }
 
 static int btree_readpage_end_io_hook(struct btrfs_io_bio *io_bio,
@@ -671,6 +736,9 @@ static int btree_readpage_end_io_hook(struct btrfs_io_bio *io_bio,
 		set_bit(EXTENT_BUFFER_CORRUPT, &eb->bflags);
 		ret = -EIO;
 	}
+
+	if (found_level > 0 && check_node(root, eb))
+		ret = -EIO;
 
 	if (!ret)
 		set_extent_buffer_uptodate(eb);
@@ -2255,6 +2323,7 @@ int open_ctree(struct super_block *sb,
 	spin_lock_init(&fs_info->qgroup_op_lock);
 	spin_lock_init(&fs_info->buffer_lock);
 	spin_lock_init(&fs_info->unused_bgs_lock);
+	mutex_init(&fs_info->unused_bg_unpin_mutex);
 	rwlock_init(&fs_info->tree_mod_log_lock);
 	mutex_init(&fs_info->reloc_mutex);
 	mutex_init(&fs_info->delalloc_root_mutex);
@@ -4150,6 +4219,7 @@ static int btrfs_destroy_marked_extents(struct btrfs_root *root,
 static int btrfs_destroy_pinned_extent(struct btrfs_root *root,
 				       struct extent_io_tree *pinned_extents)
 {
+	struct btrfs_fs_info *fs_info = root->fs_info;
 	struct extent_io_tree *unpin;
 	u64 start;
 	u64 end;
@@ -4159,21 +4229,31 @@ static int btrfs_destroy_pinned_extent(struct btrfs_root *root,
 	unpin = pinned_extents;
 again:
 	while (1) {
+		/*
+		 * The btrfs_finish_extent_commit() may get the same range as
+		 * ours between find_first_extent_bit and clear_extent_dirty.
+		 * Hence, hold the unused_bg_unpin_mutex to avoid double unpin
+		 * the same extent range.
+		 */
+		mutex_lock(&fs_info->unused_bg_unpin_mutex);
 		ret = find_first_extent_bit(unpin, 0, &start, &end,
 					    EXTENT_DIRTY, NULL);
-		if (ret)
+		if (ret) {
+			mutex_unlock(&fs_info->unused_bg_unpin_mutex);
 			break;
+		}
 
 		clear_extent_dirty(unpin, start, end, GFP_NOFS);
 		btrfs_error_unpin_extent_range(root, start, end);
+		mutex_unlock(&fs_info->unused_bg_unpin_mutex);
 		cond_resched();
 	}
 
 	if (loop) {
-		if (unpin == &root->fs_info->freed_extents[0])
-			unpin = &root->fs_info->freed_extents[1];
+		if (unpin == &fs_info->freed_extents[0])
+			unpin = &fs_info->freed_extents[1];
 		else
-			unpin = &root->fs_info->freed_extents[0];
+			unpin = &fs_info->freed_extents[0];
 		loop = false;
 		goto again;
 	}
