@@ -253,7 +253,7 @@ static void rx_refill_timeout(unsigned long data)
 static int netfront_tx_slot_available(struct netfront_queue *queue)
 {
 	return (queue->tx.req_prod_pvt - queue->tx.rsp_cons) <
-		(TX_MAX_TARGET - MAX_SKB_FRAGS - 2);
+		(TX_MAX_TARGET - XEN_NETIF_NR_SLOTS_MIN - 1);
 }
 
 static void xennet_maybe_wake_tx(struct netfront_queue *queue)
@@ -802,7 +802,7 @@ static int xennet_get_responses(struct netfront_queue *queue,
 	RING_IDX cons = queue->rx.rsp_cons;
 	struct sk_buff *skb = xennet_get_rx_skb(queue, cons);
 	grant_ref_t ref = xennet_get_rx_ref(queue, cons);
-	int max = MAX_SKB_FRAGS + (rx->status <= RX_COPY_THRESHOLD);
+	int max = XEN_NETIF_NR_SLOTS_MIN + (rx->status <= RX_COPY_THRESHOLD);
 	int slots = 1;
 	int err = 0;
 	unsigned long ret;
@@ -919,7 +919,11 @@ static RING_IDX xennet_fill_frags(struct netfront_queue *queue,
 			BUG_ON(pull_to < skb_headlen(skb));
 			__pskb_pull_tail(skb, pull_to - skb_headlen(skb));
 		}
-		BUG_ON(skb_shinfo(skb)->nr_frags >= MAX_SKB_FRAGS);
+		if (unlikely(skb_shinfo(skb)->nr_frags >= MAX_SKB_FRAGS)) {
+			queue->rx.rsp_cons = ++cons;
+			kfree_skb(nskb);
+			return ~0U;
+		}
 
 		skb_add_rx_frag(skb, skb_shinfo(skb)->nr_frags,
 				skb_frag_page(nfrag),
@@ -1057,6 +1061,8 @@ err:
 		skb->len += rx->status;
 
 		i = xennet_fill_frags(queue, skb, &tmpq);
+		if (unlikely(i == ~0U))
+			goto err;
 
 		if (rx->flags & XEN_NETRXF_csum_blank)
 			skb->ip_summed = CHECKSUM_PARTIAL;
@@ -1637,6 +1643,7 @@ static int xennet_init_queue(struct netfront_queue *queue)
 {
 	unsigned short i;
 	int err = 0;
+	char *devid;
 
 	spin_lock_init(&queue->tx_lock);
 	spin_lock_init(&queue->rx_lock);
@@ -1650,8 +1657,9 @@ static int xennet_init_queue(struct netfront_queue *queue)
 	queue->rx_refill_timer.data = (unsigned long)queue;
 	queue->rx_refill_timer.function = rx_refill_timeout;
 
-	snprintf(queue->name, sizeof(queue->name), "%s-q%u",
-		 queue->info->netdev->name, queue->id);
+	devid = strrchr(queue->info->xbdev->nodename, '/') + 1;
+	snprintf(queue->name, sizeof(queue->name), "vif%s-q%u",
+		 devid, queue->id);
 
 	/* Initialise tx_skbs as a free chain containing every entry. */
 	queue->tx_skb_freelist = 0;

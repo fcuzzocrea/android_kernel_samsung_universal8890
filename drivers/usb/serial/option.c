@@ -199,6 +199,8 @@ static void option_instat_callback(struct urb *urb);
 #define DELL_PRODUCT_5800_V2_MINICARD_VZW	0x8196  /* Novatel E362 */
 #define DELL_PRODUCT_5804_MINICARD_ATT		0x819b  /* Novatel E371 */
 
+#define DELL_PRODUCT_5821E			0x81d7
+
 #define KYOCERA_VENDOR_ID			0x0c88
 #define KYOCERA_PRODUCT_KPC650			0x17da
 #define KYOCERA_PRODUCT_KPC680			0x180a
@@ -648,6 +650,10 @@ static const struct option_blacklist_info net_intf6_blacklist = {
 	.reserved = BIT(6),
 };
 
+static const struct option_blacklist_info dell_5821e_blacklist = {
+	.reserved = BIT(0) | BIT(1) | BIT(6),
+};
+
 static const struct option_blacklist_info cinterion_mv31_mbim_blacklist = {
 	.reserved = BIT(3),
 };
@@ -662,6 +668,10 @@ static const struct option_blacklist_info zte_mf626_blacklist = {
 };
 
 static const struct option_blacklist_info zte_1255_blacklist = {
+	.reserved = BIT(3) | BIT(4),
+};
+
+static const struct option_blacklist_info zte_p685m_blacklist = {
 	.reserved = BIT(3) | BIT(4),
 };
 
@@ -1223,6 +1233,8 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE_AND_INTERFACE_INFO(DELL_VENDOR_ID, DELL_PRODUCT_5800_MINICARD_VZW, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(DELL_VENDOR_ID, DELL_PRODUCT_5800_V2_MINICARD_VZW, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(DELL_VENDOR_ID, DELL_PRODUCT_5804_MINICARD_ATT, 0xff, 0xff, 0xff) },
+	{ USB_DEVICE(DELL_VENDOR_ID, DELL_PRODUCT_5821E),
+		.driver_info = (kernel_ulong_t) &dell_5821e_blacklist },
 	{ USB_DEVICE(ANYDATA_VENDOR_ID, ANYDATA_PRODUCT_ADU_E100A) },	/* ADU-E100, ADU-310 */
 	{ USB_DEVICE(ANYDATA_VENDOR_ID, ANYDATA_PRODUCT_ADU_500A) },
 	{ USB_DEVICE(ANYDATA_VENDOR_ID, ANYDATA_PRODUCT_ADU_620UW) },
@@ -1689,7 +1701,8 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1272, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1273, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1274, 0xff, 0xff, 0xff) },
-	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1275, 0xff, 0xff, 0xff) },
+	{ USB_DEVICE(ZTE_VENDOR_ID, 0x1275),	/* ZTE P685M */
+	  .driver_info = (kernel_ulong_t)&zte_p685m_blacklist },
 	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1276, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1277, 0xff, 0xff, 0xff) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(ZTE_VENDOR_ID, 0x1278, 0xff, 0xff, 0xff) },

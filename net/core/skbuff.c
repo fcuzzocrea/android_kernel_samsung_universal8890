@@ -2324,6 +2324,25 @@ void skb_queue_purge(struct sk_buff_head *list)
 EXPORT_SYMBOL(skb_queue_purge);
 
 /**
+ *	skb_rbtree_purge - empty a skb rbtree
+ *	@root: root of the rbtree to empty
+ *
+ *	Delete all buffers on an &sk_buff rbtree. Each buffer is removed from
+ *	the list and one reference dropped. This function does not take
+ *	any lock. Synchronization should be handled by the caller (e.g., TCP
+ *	out-of-order queue is protected by the socket lock).
+ */
+void skb_rbtree_purge(struct rb_root *root)
+{
+	struct sk_buff *skb, *next;
+
+	rbtree_postorder_for_each_entry_safe(skb, next, root, rbnode)
+		kfree_skb(skb);
+
+	*root = RB_ROOT;
+}
+
+/**
  *	skb_queue_head - queue a buffer at the list head
  *	@list: list to use
  *	@newsk: buffer to queue
@@ -2514,7 +2533,19 @@ EXPORT_SYMBOL(skb_split);
  */
 static int skb_prepare_for_shift(struct sk_buff *skb)
 {
-	return skb_cloned(skb) && pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
+	int ret = 0;
+
+	if (skb_cloned(skb)) {
+		/* Save and restore truesize: pskb_expand_head() may reallocate
+		 * memory where ksize(kmalloc(S)) != ksize(kmalloc(S)), but we
+		 * cannot change truesize at this point.
+		 */
+		unsigned int save_truesize = skb->truesize;
+
+		ret = pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
+		skb->truesize = save_truesize;
+	}
+	return ret;
 }
 
 /**

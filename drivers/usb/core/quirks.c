@@ -37,6 +37,10 @@ static const struct usb_device_id usb_quirk_list[] = {
 	/* CBM - Flash disk */
 	{ USB_DEVICE(0x0204, 0x6025), .driver_info = USB_QUIRK_RESET_RESUME },
 
+	/* WORLDE Controller KS49 or Prodipe MIDI 49C USB controller */
+	{ USB_DEVICE(0x0218, 0x0201), .driver_info =
+			USB_QUIRK_CONFIG_INTF_STRINGS },
+
 	/* WORLDE easy key (easykey.25) MIDI controller  */
 	{ USB_DEVICE(0x0218, 0x0401), .driver_info =
 			USB_QUIRK_CONFIG_INTF_STRINGS },
@@ -222,6 +226,9 @@ static const struct usb_device_id usb_quirk_list[] = {
 
 	/* X-Rite/Gretag-Macbeth Eye-One Pro display colorimeter */
 	{ USB_DEVICE(0x0971, 0x2000), .driver_info = USB_QUIRK_NO_SET_INTF },
+
+	/* ELMO L-12F document camera */
+	{ USB_DEVICE(0x09a1, 0x0028), .driver_info = USB_QUIRK_DELAY_CTRL_MSG },
 
 	/* Broadcom BCM92035DGROM BT dongle */
 	{ USB_DEVICE(0x0a5c, 0x2021), .driver_info = USB_QUIRK_RESET_RESUME },
