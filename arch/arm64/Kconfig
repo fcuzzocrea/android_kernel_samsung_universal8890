@@ -1009,10 +1009,6 @@ config SYSVIPC_COMPAT
 	depends on COMPAT && SYSVIPC
 
 config KEYS_COMPAT
-	def_bool y
-	depends on COMPAT && KEYS
-
-config KEYS_COMPAT
 	def_bool y if COMPAT && KEYS
 	help
 	  This option enables support for a 32-bit keyctl syscall callback function under
